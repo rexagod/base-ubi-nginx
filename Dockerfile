@@ -72,7 +72,8 @@ RUN microdnf install which sed nginx openssl vim -y && \
     chmod -R a+rwx /run && \
     chown -R 1001:0 /run
 
+COPY index.html /usr/share/nginx/html
+
 USER 1001
 
-# CMD ["nginx", "-g", "daemon off;"]
-
+CMD ["nginx", "-g", "daemon off;"]
