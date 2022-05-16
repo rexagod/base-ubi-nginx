@@ -40,6 +40,7 @@ RUN microdnf install which sed nginx openssl vim -y && \
     # Set the default port to 9080 in NGINX_DEFAULT_CONF_PATH.
     sed -e "s/listen       80/listen       ${DEFAULT_PORT}/g" \
         -e "s/listen       \[::\]:80/listen       \[::\]:${DEFAULT_PORT}/g" \
+        -e "s/root         \/usr\/share\/nginx\/html/root         \/var\/www\/html/g" \
         "${NGINX_DEFAULT_CONF_PATH}" > "${NGINX_DEFAULT_CONF_PATH}.tmp" && \
     mv "${NGINX_DEFAULT_CONF_PATH}.tmp" "${NGINX_DEFAULT_CONF_PATH}" && \
     # Generate fake private key and CSR only for development purposes.
@@ -72,7 +73,9 @@ RUN microdnf install which sed nginx openssl vim -y && \
     chmod -R a+rwx /run && \
     chown -R 1001:0 /run
 
-COPY index.html /usr/share/nginx/html
+RUN mkdir -p /var/www/html
+
+COPY index.html /var/www/html
 
 USER 1001
 
