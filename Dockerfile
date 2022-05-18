@@ -17,7 +17,9 @@ ENV NAME="NGINX-bootstraper" \
     DESCRIPTION="A ubi-minimal based image that bootstraps your application on top of NGINX." \
     NGINX_DEFAULT_CONF_DIR="/etc/nginx/conf.d" \
     NGINX_DEFAULT_CONF_PATH="/etc/nginx/nginx.conf" \
-    NGINX_DEFAULT_LOG_PATH="/var/log/nginx/error.log"
+    NGINX_DEFAULT_LOG_PATH="/var/log/nginx/error.log"\
+    NGINX_VERSION="1:1.14.1-9.module+el8.0.0+4108+af250afe"\
+    ARCH="x86_64"
 
 LABEL name="${NAME}" \
       summary="${SUMMARY}" \
@@ -32,7 +34,7 @@ LABEL name="${NAME}" \
       io.openshift.tags="minimal,rhel8,${NAME}"
 
 
-RUN microdnf install which nginx -y && \
+RUN microdnf install nginx-${NGINX_VERSION}.${ARCH} -y &&\
     microdnf clean all
 
 RUN mkdir -p /var/www/html
