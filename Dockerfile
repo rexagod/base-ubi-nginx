@@ -1,4 +1,22 @@
+ARG NAME="NGINX-bootstraper" \
+    SUMMARY="Serve application distributables over NGINX." \
+    DESCRIPTION="A ubi-minimal based image that bootstraps your application on top of NGINX." \
+    NGINX_CONF_DIR="/etc/nginx/conf.d" \
+    NGINX_CONF_PATH="/etc/nginx/nginx.conf" \
+    NGINX_LOG_PATH="/var/log/nginx/error.log" \
+    NGINX_SBIN_DIR="/usr/sbin/nginx" \
+    NGINX_PID_PATH="/var/run/nginx.pid" \
+    NGINX_LOCK_PATH="/var/lock/nginx.lock"
+
+
 FROM registry.access.redhat.com/ubi8/ubi:latest as builder
+
+ARG NGINX_CONF_DIR \
+    NGINX_CONF_PATH \
+    NGINX_LOG_PATH \
+    NGINX_SBIN_DIR \
+    NGINX_PID_PATH \
+    NGINX_LOCK_PATH
 
 RUN dnf install wget gcc glibc-static pcre-devel zlib perl -y
 
@@ -20,7 +38,6 @@ RUN tar -xzf openssl-1.1.1d.tar.gz
 RUN wget https://ftp.exim.org/pub/pcre/pcre-8.45.tar.gz 
 RUN tar -xzf pcre-8.45.tar.gz
 
-
 # get zlib source
 RUN wget https://zlib.net/zlib-1.2.12.tar.gz
 RUN tar -xzf zlib-1.2.12.tar.gz
@@ -30,12 +47,12 @@ RUN dnf install diffutils gcc-c++ -y
 # build nginx
 RUN ./configure \
     --prefix="." \
-    --sbin-path="nginx" \
-    --conf-path="/etc/nginx/nginx.conf"\
-    --pid-path="nginx.pid" \
-    --lock-path="nginx.lock" \
+    --sbin-path=${NGINX_SBIN_DIR} \
+    --conf-path=${NGINX_CONF_PATH}\
+    --pid-path=${NGINX_PID_PATH} \
+    --lock-path=${NGINX_LOCK_PATH} \
     --error-log-path=stderr \
-    --http-log-path=access.log \
+    --http-log-path=${NGINX_LOG_PATH} \
     --http-client-body-temp-path="client_body_temp" \
     --http-proxy-temp-path="proxy_temp" \
     --user=nobody \
@@ -69,22 +86,17 @@ RUN make
 #       - Modifying the DEFAULT_PORT ARG.
 #       - Specifying the desired server port in a custom NGINX_DEFAULT_CONF_PATH file.
 
-FROM registry.access.redhat.com/ubi8/ubi-micro:latest
+FROM registry.access.redhat.com/ubi8/ubi-micro:latest as final
 
-# Allow CLI injections for the default port. 
+ARG NGINX_LOG_PATH \
+    NGINX_CONF_PATH
+
+RUN echo ${NGINX_LOG_PATH}
+# Allow CLI injections for the default port.
 ARG DEFAULT_PORT="9080"
 
 # Expose the default port.
 EXPOSE "${DEFAULT_PORT}"
-
-ENV NAME="NGINX-bootstraper" \
-    SUMMARY="Serve application distributables over NGINX." \
-    DESCRIPTION="A ubi-minimal based image that bootstraps your application on top of NGINX." \
-    NGINX_DEFAULT_CONF_DIR="/etc/nginx/conf.d" \
-    NGINX_DEFAULT_CONF_PATH="/etc/nginx/nginx.conf" \
-    NGINX_DEFAULT_LOG_PATH="/var/log/nginx/error.log"\
-    NGINX_VERSION="1:1.14.1-9.module+el8.0.0+4108+af250afe"\
-    ARCH="x86_64"
 
 LABEL name="${NAME}" \
     summary="${SUMMARY}" \
@@ -99,17 +111,16 @@ LABEL name="${NAME}" \
     io.openshift.tags="minimal,rhel8,${NAME}"
 
 # copy nginx binary from builder image
-COPY --from=builder /nginx-1.21.0/objs/nginx /usr/sbin/nginx
+COPY --from=builder /nginx-1.21.0/objs/nginx ${NGINX_SBIN_PATH}
 
-RUN mkdir -p /var/log/nginx
+RUN mkdir -p ${NGINX_LOG_PATH}
 
 # copy mime types from builder image
-COPY --from=builder /nginx-1.21.0/conf/mime.types /etc/nginx/mime.types
+COPY --from=builder /nginx-1.21.0/conf/* /etc/nginx/*
+
+COPY default-nginx.conf ${NGINX_CONF_PATH}
 
 RUN mkdir -p /var/www/html
-
-COPY default-nginx.conf ${NGINX_DEFAULT_CONF_PATH}
-
 COPY index.html /var/www/html
 
 CMD ["nginx", "-g", "daemon off;"]
