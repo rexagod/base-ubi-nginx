@@ -1,6 +1,7 @@
 # Nginx Base Image
 
-A lightweight NGINX server based on ubi-minimal image.
+A lightweight NGINX server based on ubi-minimal image. 
+The image is currently on version `nginx-1.21.0`
 
 # About
 
